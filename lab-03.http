@@ -1,0 +1,196 @@
+### ============================================================================
+### SpinCycle Bikes - REST API Test Suite (Group 3 | YG-CSE2E-G03)
+### Base URL: http://localhost:3000
+### Note: Start the server first with `npm start` inside SpinCycle-Bikes/.
+### ============================================================================
+
+
+### ============================================================================
+### 1. HEALTH CHECK
+### ============================================================================
+
+# Verify Express server is running and SQLite database is connected (Expect: 200 OK)
+GET http://localhost:3000/health
+
+
+### ============================================================================
+### 2. BIKES - RETRIEVAL, PAGINATION & SEARCH
+### ============================================================================
+
+# Get bikes with default pagination (defaults: page=1, limit=5) (Expect: 200 OK)
+GET http://localhost:3000/bikes
+
+###
+
+# Get a single bike by valid positive integer ID (Expect: 200 OK)
+GET http://localhost:3000/bikes/1
+
+###
+
+# Get a single bike with invalid ID (Expect: 400 Bad Request)
+GET http://localhost:3000/bikes/abc
+
+###
+
+# Get a single bike with nonexistent ID (Expect: 404 Not Found)
+GET http://localhost:3000/bikes/999
+
+###
+
+# Mandatory Pagination Test 1: First 2 bikes ordered by bike_id (Expect: 200 OK)
+GET http://localhost:3000/bikes?page=1&limit=2
+
+###
+
+# Mandatory Pagination Test 2: Next 2 bikes (no duplicates from page 1) (Expect: 200 OK)
+GET http://localhost:3000/bikes?page=2&limit=2
+
+###
+
+# Mandatory Pagination Test 3: Zero page number (Expect: 400 Bad Request)
+GET http://localhost:3000/bikes?page=0
+
+###
+
+# Negative limit validation (Expect: 400 Bad Request)
+GET http://localhost:3000/bikes?limit=-2
+
+###
+
+# Non-numeric page validation (Expect: 400 Bad Request)
+GET http://localhost:3000/bikes?page=abc
+
+###
+
+# Search bikes by type: Mountain (case-insensitive) (Expect: 200 OK)
+GET http://localhost:3000/bikes?type=Mountain
+
+###
+
+# Search bikes by type: Road (case-insensitive) (Expect: 200 OK)
+GET http://localhost:3000/bikes?type=Road
+
+###
+
+# Combined search and pagination: Mountain bikes, page 1, limit 2 (Expect: 200 OK)
+GET http://localhost:3000/bikes?type=Mountain&page=1&limit=2
+
+###
+
+# Empty/whitespace search type validation (Expect: 400 Bad Request)
+GET http://localhost:3000/bikes?type=%20%20
+
+
+### ============================================================================
+### 3. BIKES - CREATE, UPDATE & DELETE (CRUD)
+### ============================================================================
+
+# [TEMPORARY TEST DATA] Add a new bike (creates bike_id 9 on a clean seeded DB) (Expect: 201 Created)
+POST http://localhost:3000/bikes
+Content-Type: application/json
+
+{
+  "bike_name": "Campus Explorer",
+  "bike_type": "Hybrid"
+}
+
+###
+
+# Validation check: Reject empty bike_name / bike_type (Expect: 400 Bad Request)
+POST http://localhost:3000/bikes
+Content-Type: application/json
+
+{
+  "bike_name": "   ",
+  "bike_type": ""
+}
+
+###
+
+# [TEMPORARY TEST DATA] Update the temporary bike created above (replace 9 if needed; preserves seeded bikes 1-8) (Expect: 200 OK)
+PUT http://localhost:3000/bikes/9
+Content-Type: application/json
+
+{
+  "bike_name": "Campus Explorer Pro",
+  "bike_type": "Mountain"
+}
+
+###
+
+# [TEMPORARY TEST DATA] Delete the temporary bike created above (replace 9 if needed; preserves seeded bikes 1-8) (Expect: 200 OK)
+DELETE http://localhost:3000/bikes/9
+
+###
+
+# Referential integrity check: Attempt to delete bike 1 which has rental history (Expect: 409 Conflict)
+DELETE http://localhost:3000/bikes/1
+
+
+### ============================================================================
+### 4. RIDERS
+### ============================================================================
+
+# Get all registered riders (Expect: 200 OK)
+GET http://localhost:3000/riders
+
+###
+
+# Get a single rider by valid rider_id (Expect: 200 OK)
+GET http://localhost:3000/riders/1
+
+###
+
+# [TEMPORARY TEST DATA] Register a new rider with a unique student_id (Expect: 201 Created)
+POST http://localhost:3000/riders
+Content-Type: application/json
+
+{
+  "rider_name": "Sahan Wickramasinghe",
+  "student_id": "STU2026099",
+  "phone": "0779876543"
+}
+
+###
+
+# Duplicate student_id check using existing seeded student STU2026001 (Expect: 409 Conflict)
+POST http://localhost:3000/riders
+Content-Type: application/json
+
+{
+  "rider_name": "Duplicate Test",
+  "student_id": "STU2026001",
+  "phone": "0770000000"
+}
+
+
+### ============================================================================
+### 5. RENTALS (SQL INNER JOIN & CREATION)
+### ============================================================================
+
+# Get all rentals joined with rider_name and bike_name (Expect: 200 OK)
+GET http://localhost:3000/rentals
+
+###
+
+# [TEMPORARY TEST DATA] Create a new active rental for bike 7 (currently has no active rental) (Expect: 201 Created)
+POST http://localhost:3000/rentals
+Content-Type: application/json
+
+{
+  "rider_id": 1,
+  "bike_id": 7,
+  "rental_date": "2026-11-12 15:00:00"
+}
+
+###
+
+# Active rental conflict check: Bike 2 already has an active rental (Expect: 409 Conflict)
+POST http://localhost:3000/rentals
+Content-Type: application/json
+
+{
+  "rider_id": 1,
+  "bike_id": 2,
+  "rental_date": "2026-11-12 15:30:00"
+}
